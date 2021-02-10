@@ -28,8 +28,8 @@ processors:
 
 Each `processors` array object is defined as follows:
 
-  * `path` - The top-level path that will be walked and scanned for matching filenames.
-  * `pattern` - The pattern used to match the filenames while walking the `path` contents recursively.
-  * `command` - The command to run on matching files; this value is processed as a Go template.
+* `path` - The top-level path that will be walked and scanned for matching filenames.
+* `pattern` - The pattern used to match the filenames while walking the `path` contents recursively.
+* `command` - The command to run on matching files; this value is processed as a Go template.
 
 When loaded, the configuration informs `hugo-preproc` where to scan, what to match for, and what command to execute for each file matched.  Multiple `processors` entries will be executed serially, in the order in which they are defined.
