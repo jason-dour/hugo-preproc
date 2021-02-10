@@ -33,3 +33,20 @@ Each `processors` array object is defined as follows:
 * `command` - The command to run on matching files; this value is processed as a Go template.
 
 When loaded, the configuration informs `hugo-preproc` where to scan, what to match for, and what command to execute for each file matched.  Multiple `processors` entries will be executed serially, in the order in which they are defined.
+
+## Go Templates
+
+We are using Go Templates to process the `command` key in each `processors` object.  This allows for the command to use the matched file name (and derivations of it) as part of the `command`.
+
+Other than standard Go Template functions, we also add:
+
+* `replace` - `strings.Replace`
+  * Use: `{{replace <input> <search> <replace> <n>}}`
+  * Example:
+    * Matched name: `example.drawio`
+    * `command`: `draw.io --export --output {{replace . ".md" ".svg" -1}} --format svg {{.}}`
+    * Template output used for `exec`: `draw.io --export --output example.svg --format svg example.drawio`
+
+This allows for a reasonably easy way to specify complex commands for processing files prior to the Hugo run.
+
+Other template functions can be added or mapped in as this codebase evolves.
