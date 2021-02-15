@@ -31,12 +31,13 @@ type Configs struct {
 }
 
 var (
-	configs Configs // Variable to process the YAML config into.
+	// Variable to process the YAML config into.
+	configs Configs
 
 	// Used for flags.
-	cfgFile     string
-	userLicense string
+	cfgFile string
 
+	// Cobra definition.
 	rootCmd = &cobra.Command{
 		Use:   "hugo-preproc",
 		Short: "A preprocessor for Hugo",
@@ -46,38 +47,50 @@ configured processors to be run on the Hugo datafiles.`,
 	}
 )
 
-// Execute executes the root command.
+// Execute - Executes the root command.
 func Execute() error {
 	return rootCmd.Execute()
 }
 
-// walkMatch - TODO
+// walkMatch - Walk the tree and look for files matching the provided pattern.
 func walkMatch(root, pattern string) ([]string, error) {
+	// Initialize the match list.
 	var matches []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
+
+	// Walk the tree.
+	err := filepath.Walk(root,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
+				return err
+			} else if matched {
+				matches = append(matches, path)
+			}
+
 			return nil
-		}
-		if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
-			return err
-		} else if matched {
-			matches = append(matches, path)
-		}
-		return nil
-	})
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
+
 	return matches, nil
 }
 
+// init - Command initialization routine.
 func init() {
+	// Initialize Cobra
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.hugo-preproc.yaml)")
+	// Define the command line flags.
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.hugo-preproc.yaml)")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -89,48 +102,59 @@ func initConfig() {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			panic(err)
 		}
 
+		// Look in HOME and current working directory for the config file.
 		viper.AddConfigPath(home)
 		viper.AddConfigPath(".")
+
+		// Define the config file name.
 		viper.SetConfigName(".hugo-preproc")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	// Read in environment variables that match
+	viper.AutomaticEnv()
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
+	err := viper.ReadInConfig()
+	if err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 
-	err := viper.Unmarshal(&configs)
+	// Unmarshal the configuration into the config struct.
+	err = viper.Unmarshal(&configs)
 	if err != nil {
 		panic(err)
 	}
-	// fmt.Printf("%#v\n", configs)
 }
 
+// runProcessors - Iterate through the processors configured in the config file.
 func runProcessors() {
+	// Loop through each processor...
 	for i := 0; i < len(configs.Cfgs); i++ {
+		// Walk the tree configured in the processor...retrieving the matched files.
 		files, err := walkMatch(configs.Cfgs[i].Path, configs.Cfgs[i].Pattern)
 		if err != nil {
 			panic(err)
 		}
+		// Loop through each file matched...
 		for j := 0; j < len(files); j++ {
+			// Map in the additional functions for the template.
 			funcMap := template.FuncMap{
 				"replace": strings.Replace,
 			}
 
+			// Process the command in the processor as a template.
 			tmpl, err := template.New("test").Funcs(funcMap).Parse(configs.Cfgs[i].Command)
 			if err != nil {
 				panic(err)
 			}
+			// Convert the template to output string.
 			var tmplout bytes.Buffer
 			err = tmpl.Execute(&tmplout, files[j])
-			// fmt.Printf("%v\n", tmplout.String())
 
+			// Execute the command and grab the output.
 			cmd := exec.Command("sh", "-c", tmplout.String())
 			cmd.Stdout = os.Stdout
 			err = cmd.Run()
@@ -138,8 +162,8 @@ func runProcessors() {
 				panic(err)
 			}
 		}
-		// fmt.Printf("%v\n", files)
 	}
 
+	// All done.
 	return
 }
