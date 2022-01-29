@@ -19,12 +19,30 @@ Intended to assist with any sort of pre-processing desired for publishing files,
 First, define a configuration file.  By default, the config filename is `.hugo-preproc.yaml`.  Define a `processors` key whose value is an array of processor objects with `path`, `pattern`, and `command` values.  Such as:
 
 ``` yaml
+git:
+  path: path/to/the/git/repo
+  head:
+    output: filename-for-output-can-be-a-template
+    template: "template to process to put into the output file."
+  each:
+    output: filename-for-output-can-be-a-template
+    template: "template to process to put into the output file."
+  all:
+    output: filename-for-output-can-be-a-template
+    template: "template to process to put into the output file."
 processors:
   - path: path/to/top/level
     pattern: "*.md"
     command: echo {{.}}
     # Clearly this example is rather dull; it simply echoes the name of the found file.
 ```
+
+To enable easy processing of git log data into Hugo pages, there are different git output options that may be used:
+
+* `path` - Defines the path to the git repo (default: ".")
+* `head` - For the HEAD commit.
+* `each` - For iterating through every commit; executing for each commit.
+* `all` - For passing the entire log to the template.
 
 Each `processors` array object is defined as follows:
 
@@ -46,6 +64,10 @@ Other than standard Go Template functions, we also add:
     * Matched name: `example.drawio`
     * `command`: `draw.io --export --output {{replace . ".md" ".svg" -1}} --format svg {{.}}`
     * Template output used for `exec`: `draw.io --export --output example.svg --format svg example.drawio`
+* `split` - `strings.Split`
+  * Use: `{{split <input> <separator>}}`
+* `trimsuffix` - `strings.TrimSuffix`
+  * Use: `{{trimsuffix <input> <trim_string>}}`
 
 This allows for a reasonably easy way to specify complex commands for processing files prior to the Hugo run.
 
