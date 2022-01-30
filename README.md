@@ -22,14 +22,17 @@ First, define a configuration file.  By default, the config filename is `.hugo-p
 git:
   path: path/to/the/git/repo
   head:
-    output: filename-for-output-can-be-a-template
-    template: "template to process to put into the output file."
+    - file: path/to/first/head-file
+      template: |
+        first template to process Head commit log
+    - file: filename-for-output-can-be-a-template
+      template: "template to process to put into the output file."
   each:
-    output: filename-for-output-can-be-a-template
-    template: "template to process to put into the output file."
+    - file: filename-for-output-can-be-a-template
+      template: "template to process to put into the output file."
   all:
-    output: filename-for-output-can-be-a-template
-    template: "template to process to put into the output file."
+    - file: filename-for-output-can-be-a-template
+      template: "template to process to put into the output file."
 processors:
   - path: path/to/top/level
     pattern: "*.md"
@@ -40,10 +43,10 @@ processors:
 The `git` key defines how to handle processing of git log data into Hugo files.  The `git` parameters are as follows:
 
 * `path` - Defines the path to the git repo (default: ".")
-* `head` - For processing the HEAD commit. Only the HEAD commit will be read and passed through the processor.
+* `head` - Array of processors for processing the HEAD commit. Only the HEAD commit will be read and passed through the processors.
   * `file` - The file to output; processed as a template.
   * `template` - The template through which the git log entry/entries will be processed and then written to `file`.
-* `each` - For iterating through every commit; executing the filename and output templates for each commit.
+* `each` - Array of processors for iterating through every commit; executing the filename and output templates for each commit.
   * Same as `head`.
 * `all` - For passing the entire git log to the template in a large structure.
   * Same as `head`.
