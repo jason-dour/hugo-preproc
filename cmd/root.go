@@ -20,9 +20,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+// GitLogEntry - Individual git log entry and changed files.
 type GitLogEntry struct {
 	Commit *object.Commit
 	Stats  object.FileStats
+}
+
+// GitAll - Entire Git log.
+type GitAll struct {
+	Commits []GitLogEntry
+	Head    GitLogEntry
 }
 
 // GitLog - Configuration structure for processing git log entries.
@@ -208,11 +215,6 @@ func runGits() {
 	ref, err := r.Head()
 	panicIfError(err)
 
-	// Get the commit history in an interator.
-	commitIter, err := r.Log(&git.LogOptions{From: ref.Hash()})
-	panicIfError(err)
-	_ = commitIter
-
 	// Handle the Head git config if it exists.
 	if (len(configs.Gits.Head.File) > 0) && (len(configs.Gits.Head.Template) > 0) {
 		// Grab the HEAD commit.
@@ -255,10 +257,16 @@ func runGits() {
 
 	// Handle the Each git config if it exists.
 	if (len(configs.Gits.Each.File) > 0) && (len(configs.Gits.Each.Template) > 0) {
+		// Get the commit history in an interator.
+		commitIter, err := r.Log(&git.LogOptions{From: ref.Hash()})
+		panicIfError(err)
+
 		// Iterate through the commits.
 		err = commitIter.ForEach(func(commit *object.Commit) error {
+			// Grab the commit stats.
 			commitStats, err := commit.Stats()
 			panicIfError(err)
+			defer commitIter.Close()
 
 			// Process the file in the config as a template to create the file name.
 			fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(configs.Gits.Each.File)
@@ -296,7 +304,59 @@ func runGits() {
 		panicIfError(err)
 	}
 
-	// TODO: #3 Handle the All git config if it exists.
+	// Handle the All git config if it exists.
+	if (len(configs.Gits.All.File) > 0) && (len(configs.Gits.All.Template) > 0) {
+		// Get the commit history in an interator.
+		commitIter, err := r.Log(&git.LogOptions{From: ref.Hash()})
+		panicIfError(err)
+		defer commitIter.Close()
+
+		var allGit GitAll
+
+		// Grab the HEAD commit.
+		allGit.Head.Commit, err = r.CommitObject(ref.Hash())
+		panicIfError(err)
+		allGit.Head.Stats, err = allGit.Head.Commit.Stats()
+		panicIfError(err)
+
+		// Iterate through the commits.
+		// allGit.Commits = []GitLogEntry{}
+		err = commitIter.ForEach(func(commit *object.Commit) error {
+			commitStats, err := commit.Stats()
+			panicIfError(err)
+			allGit.Commits = append(allGit.Commits, GitLogEntry{
+				Commit: commit,
+				Stats:  commitStats,
+			})
+			return nil
+		})
+		panicIfError(err)
+
+		// Process the file in the config as a template to create the file name.
+		fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(configs.Gits.All.File)
+		panicIfError(err)
+		var templateFile bytes.Buffer
+		err = fileTemplate.Execute(&templateFile, allGit)
+		panicIfError(err)
+
+		// Process the output template in the config.
+		outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Gits.All.Template)
+		panicIfError(err)
+		var templateOut bytes.Buffer
+		err = outTemplate.Execute(&templateOut, allGit)
+		panicIfError(err)
+
+		// Create the file.
+		err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
+		panicIfError(err)
+		outFile, err := os.Create(templateFile.String())
+		panicIfError(err)
+		defer outFile.Close()
+
+		// Write the output to the file.
+		_, err = outFile.WriteString(templateOut.String())
+		panicIfError(err)
+	}
 }
 
 func run() {
