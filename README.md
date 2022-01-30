@@ -16,7 +16,7 @@ Intended to assist with any sort of pre-processing desired for publishing files,
 
 ## Use
 
-First, define a configuration file.  By default, the config filename is `.hugo-preproc.yaml`.  Define a `processors` key whose value is an array of processor objects with `path`, `pattern`, and `command` values.  Such as:
+First, define a configuration file.  By default, the config filename is `.hugo-preproc.yaml`.  There are two primary keys: `git` and `processors`, such as this example:
 
 ``` yaml
 git:
@@ -37,24 +37,24 @@ processors:
     # Clearly this example is rather dull; it simply echoes the name of the found file.
 ```
 
-To enable easy processing of git log data into Hugo pages, there are different git output options that may be used:
+The `git` key defines how to handle processing of git log data into Hugo files.  The `git` parameters are as follows:
 
 * `path` - Defines the path to the git repo (default: ".")
-* `head` - For the HEAD commit.
+* `head` - For processing the HEAD commit. Only the HEAD commit will be read and passed through the processor.
   * `file` - The file to output; processed as a template.
   * `template` - The template through which the git log entry/entries will be processed and then written to `file`.
-* `each` - For iterating through every commit; executing for each commit.
+* `each` - For iterating through every commit; executing the filename and output templates for each commit.
   * Same as `head`.
-* `all` - For passing the entire log to the template.
+* `all` - For passing the entire git log to the template in a large structure.
   * Same as `head`.
 
-Each `processors` array object is defined as follows:
+The `processors` key is an array object, with each array element defined as follows:
 
 * `path` - The top-level path that will be walked and scanned for matching filenames.
 * `pattern` - The pattern used to match the filenames while walking the `path` contents recursively.
 * `command` - The command to run on matching files; this value is processed as a Go template.
 
-When loaded, the configuration informs `hugo-preproc` where to scan, what to match for, and what command to execute for each file matched.  Multiple `processors` entries will be executed serially, in the order in which they are defined.
+The array entries will be executed serially, in the order in which they are defined.
 
 ## Go Templates
 
