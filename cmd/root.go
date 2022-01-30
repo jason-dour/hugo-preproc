@@ -76,6 +76,13 @@ configured processors to be run on the Hugo datafiles.`,
 	}
 )
 
+// panicIfError - Panic if an error occurred.
+func panicIfError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 // Execute - Executes the root command.
 func Execute() error {
 	return rootCmd.Execute()
@@ -89,9 +96,7 @@ func walkMatch(root, pattern string) ([]string, error) {
 	// Walk the tree.
 	err := filepath.Walk(root,
 		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
+			panicIfError(err)
 
 			if info.IsDir() {
 				return nil
@@ -164,30 +169,24 @@ func runProcessors() {
 	for i := 0; i < len(configs.Processors); i++ {
 		// Walk the tree configured in the processor...retrieving the matched files.
 		files, err := walkMatch(configs.Processors[i].Path, configs.Processors[i].Pattern)
-		if err != nil {
-			panic(err)
-		}
+		panicIfError(err)
+
 		// Loop through each file matched...
 		for j := 0; j < len(files); j++ {
 			// Process the command in the processor as a template.
 			outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Processors[i].Command)
-			if err != nil {
-				panic(err)
-			}
+			panicIfError(err)
+
 			// Convert the template to output string.
 			var templateOut bytes.Buffer
 			err = outTemplate.Execute(&templateOut, files[j])
-			if err != nil {
-				panic(err)
-			}
+			panicIfError(err)
 
 			// Execute the command and grab the output.
 			cmd := exec.Command("sh", "-c", templateOut.String())
 			cmd.Stdout = os.Stdout
 			err = cmd.Run()
-			if err != nil {
-				panic(err)
-			}
+			panicIfError(err)
 		}
 	}
 }
@@ -203,82 +202,101 @@ func runGits() {
 
 	// Open the repository.
 	r, err := git.PlainOpen(repoPath)
-	if err != nil {
-		panic(err)
-	}
+	panicIfError(err)
 
 	// Get the HEAD commit.
 	ref, err := r.Head()
-	if err != nil {
-		panic(err)
-	}
+	panicIfError(err)
 
 	// Get the commit history in an interator.
 	commitIter, err := r.Log(&git.LogOptions{From: ref.Hash()})
-	if err != nil {
-		panic(err)
-	}
+	panicIfError(err)
 	_ = commitIter
 
 	// Handle the Head git config if it exists.
 	if (len(configs.Gits.Head.File) > 0) && (len(configs.Gits.Head.Template) > 0) {
 		// Grab the HEAD commit.
-		headCommit, err := r.CommitObject(ref.Hash())
-		if err != nil {
-			panic(err)
-		}
+		commit, err := r.CommitObject(ref.Hash())
+		panicIfError(err)
+		commitStats, err := commit.Stats()
+		panicIfError(err)
 
 		// Process the file in the config as a template to create the file name.
 		fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(configs.Gits.Head.File)
-		if err != nil {
-			panic(err)
-		}
+		panicIfError(err)
 		var templateFile bytes.Buffer
-		err = fileTemplate.Execute(&templateFile, headCommit)
-		if err != nil {
-			panic(err)
-		}
+		err = fileTemplate.Execute(&templateFile, GitLogEntry{
+			Commit: commit,
+			Stats:  commitStats,
+		})
+		panicIfError(err)
 
 		// Process the output template in the config.
 		outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Gits.Head.Template)
-		if err != nil {
-			panic(err)
-		}
+		panicIfError(err)
 		var templateOut bytes.Buffer
-		err = outTemplate.Execute(&templateOut, headCommit)
-		if err != nil {
-			panic(err)
-		}
+		err = outTemplate.Execute(&templateOut, GitLogEntry{
+			Commit: commit,
+			Stats:  commitStats,
+		})
+		panicIfError(err)
 
 		// Create the file.
 		err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
-		if err != nil {
-			panic(err)
-		}
+		panicIfError(err)
 		outFile, err := os.Create(templateFile.String())
-		if err != nil {
-			panic(err)
-		}
+		panicIfError(err)
 		defer outFile.Close()
 
 		// Write the output to the file.
 		_, err = outFile.WriteString(templateOut.String())
-		if err != nil {
-			panic(err)
-		}
+		panicIfError(err)
 	}
 
-	// TODO: #2 Handle the Each git config if it exists.
+	// Handle the Each git config if it exists.
+	if (len(configs.Gits.Each.File) > 0) && (len(configs.Gits.Each.Template) > 0) {
+		// Iterate through the commits.
+		err = commitIter.ForEach(func(commit *object.Commit) error {
+			commitStats, err := commit.Stats()
+			panicIfError(err)
+
+			// Process the file in the config as a template to create the file name.
+			fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(configs.Gits.Each.File)
+			panicIfError(err)
+			var templateFile bytes.Buffer
+			err = fileTemplate.Execute(&templateFile, GitLogEntry{
+				Commit: commit,
+				Stats:  commitStats,
+			})
+			panicIfError(err)
+
+			// Process the output template in the config.
+			outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Gits.Each.Template)
+			panicIfError(err)
+			var templateOut bytes.Buffer
+			err = outTemplate.Execute(&templateOut, GitLogEntry{
+				Commit: commit,
+				Stats:  commitStats,
+			})
+			panicIfError(err)
+
+			// Create the file.
+			err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
+			panicIfError(err)
+			outFile, err := os.Create(templateFile.String())
+			panicIfError(err)
+			defer outFile.Close()
+
+			// Write the output to the file.
+			_, err = outFile.WriteString(templateOut.String())
+			panicIfError(err)
+
+			return nil
+		})
+		panicIfError(err)
+	}
 
 	// TODO: #3 Handle the All git config if it exists.
-
-	// err = commitIter.ForEach(func(c *object.Commit) error {
-	// 	fmt.Println(c.Hash.String())
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	panic(err)
-	// }
 }
 
 func run() {
