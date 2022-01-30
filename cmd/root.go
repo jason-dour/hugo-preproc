@@ -27,7 +27,7 @@ type GitLogEntry struct {
 
 // GitLog - Configuration structure for processing git log entries.
 type GitLog struct {
-	Output   string `mapstructure:"output"`
+	File     string `mapstructure:"file"`
 	Template string `mapstructure:"template"`
 }
 
@@ -66,6 +66,13 @@ var (
 		Long: `Hugo-preproc is a pre-processor for Hugo that allows for
 configured processors to be run on the Hugo datafiles.`,
 		Run: func(cmd *cobra.Command, args []string) { run() },
+	}
+
+	// Map in the additional functions for the template.
+	funcMap = template.FuncMap{
+		"replace":    strings.Replace,
+		"split":      strings.Split,
+		"trimsuffix": strings.TrimSuffix,
 	}
 )
 
@@ -162,27 +169,20 @@ func runProcessors() {
 		}
 		// Loop through each file matched...
 		for j := 0; j < len(files); j++ {
-			// Map in the additional functions for the template.
-			funcMap := template.FuncMap{
-				"replace":    strings.Replace,
-				"split":      strings.Split,
-				"trimsuffix": strings.TrimSuffix,
-			}
-
 			// Process the command in the processor as a template.
-			tmpl, err := template.New("test").Funcs(funcMap).Parse(configs.Processors[i].Command)
+			outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Processors[i].Command)
 			if err != nil {
 				panic(err)
 			}
 			// Convert the template to output string.
-			var tmplout bytes.Buffer
-			err = tmpl.Execute(&tmplout, files[j])
+			var templateOut bytes.Buffer
+			err = outTemplate.Execute(&templateOut, files[j])
 			if err != nil {
 				panic(err)
 			}
 
 			// Execute the command and grab the output.
-			cmd := exec.Command("sh", "-c", tmplout.String())
+			cmd := exec.Command("sh", "-c", templateOut.String())
 			cmd.Stdout = os.Stdout
 			err = cmd.Run()
 			if err != nil {
@@ -213,22 +213,59 @@ func runGits() {
 		panic(err)
 	}
 
-	// Get the commit history.
-	// commitIter, err := r.Log(&git.LogOptions{From: ref.Hash()})
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// Get the commit history in an interator.
+	commitIter, err := r.Log(&git.LogOptions{From: ref.Hash()})
+	if err != nil {
+		panic(err)
+	}
+	_ = commitIter
 
 	// Handle the Head git config if it exists.
-	if (len(configs.Gits.Head.Output) > 0) && (len(configs.Gits.Head.Template) > 0) {
+	if (len(configs.Gits.Head.File) > 0) && (len(configs.Gits.Head.Template) > 0) {
+		// Grab the HEAD commit.
 		headCommit, err := r.CommitObject(ref.Hash())
 		if err != nil {
 			panic(err)
 		}
-		_ = headCommit
-		// TODO: #1 Handle the first commit.
-		// Process the output as a template to get output filename.
-		// Process the template and put its output into the output file.
+
+		// Process the file in the config as a template to create the file name.
+		fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(configs.Gits.Head.File)
+		if err != nil {
+			panic(err)
+		}
+		var templateFile bytes.Buffer
+		err = fileTemplate.Execute(&templateFile, headCommit)
+		if err != nil {
+			panic(err)
+		}
+
+		// Process the output template in the config.
+		outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Gits.Head.Template)
+		if err != nil {
+			panic(err)
+		}
+		var templateOut bytes.Buffer
+		err = outTemplate.Execute(&templateOut, headCommit)
+		if err != nil {
+			panic(err)
+		}
+
+		// Create the file.
+		err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
+		if err != nil {
+			panic(err)
+		}
+		outFile, err := os.Create(templateFile.String())
+		if err != nil {
+			panic(err)
+		}
+		defer outFile.Close()
+
+		// Write the output to the file.
+		_, err = outFile.WriteString(templateOut.String())
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// TODO: #2 Handle the Each git config if it exists.
