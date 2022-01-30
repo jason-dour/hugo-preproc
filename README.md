@@ -41,8 +41,12 @@ To enable easy processing of git log data into Hugo pages, there are different g
 
 * `path` - Defines the path to the git repo (default: ".")
 * `head` - For the HEAD commit.
+  * `file` - The file to output; processed as a template.
+  * `template` - The template through which the git log entry/entries will be processed and then written to `file`.
 * `each` - For iterating through every commit; executing for each commit.
+  * Same as `head`.
 * `all` - For passing the entire log to the template.
+  * Same as `head`.
 
 Each `processors` array object is defined as follows:
 
