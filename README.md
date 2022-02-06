@@ -20,24 +20,21 @@ First, define a configuration file.  By default, the config filename is `.hugo-p
 
 ``` yaml
 git:
-  path: path/to/the/git/repo
-  head:
-    - file: path/to/first/head-file
-      template: |
-        first template to process Head commit log
-    - file: filename-for-output-can-be-a-template
-      template: "template to process to put into the output file."
-  each:
-    - file: filename-for-output-can-be-a-template
-      template: "template to process to put into the output file."
-  all:
-    - file: filename-for-output-can-be-a-template
-      template: "template to process to put into the output file."
-processors:
-  - path: path/to/top/level
+  - path: path/to/repo
+    processors:
+      - mode: head | each | all
+        file: path/to/output/file1
+        template: |
+          Entry {{ . }}
+  - path: path/to/repo
+    processors:
+      - mode: head | each | all
+        file: path/to/output/file2
+        template: "Entry {{ . }}"
+exec:
+  - path: path/to/top/directory
     pattern: "*.md"
-    command: echo {{.}}
-    # Clearly this example is rather dull; it simply echoes the name of the found file.
+    command: echo {{ . }}
 ```
 
 The `git` key defines how to handle processing of git log data into Hugo files.  The `git` parameters are as follows:

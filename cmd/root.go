@@ -35,20 +35,19 @@ type GitAll struct {
 
 // GitLog - Configuration structure for processing git log entries.
 type GitLog struct {
+	Mode     string `mapstructure:"mode"`
 	File     string `mapstructure:"file"`
 	Template string `mapstructure:"template"`
 }
 
 // Git - Configuration for handling git log entries.
 type Git struct {
-	Path string   `mapstructure:"path"`
-	Head []GitLog `mapstructure:"head,flow"`
-	Each []GitLog `mapstructure:"each,flow"`
-	All  []GitLog `mapstructure:"all,flow"`
+	Path       string   `mapstructure:"path"`
+	Processors []GitLog `mapstructure:"processors"`
 }
 
 // Processor - Configuration structure for a single processor.
-type Processor struct {
+type Exec struct {
 	Path    string `mapstructure:"path"`
 	Pattern string `mapstructure:"pattern"`
 	Command string `mapstructure:"command"`
@@ -56,8 +55,8 @@ type Processor struct {
 
 // Configs - Array of processor configs.
 type Configs struct {
-	Gits       Git         `mapstructure:"git"`
-	Processors []Processor `mapstructure:"processors,flow"`
+	Gits       []Git  `mapstructure:"git,flow"`
+	Processors []Exec `mapstructure:"exec,flow"`
 }
 
 var (
@@ -171,8 +170,8 @@ func initConfig() {
 	}
 }
 
-// runProcessors - Iterate through the processors configured in the config file.
-func runProcessors() {
+// runExec - Iterate through the exec command processors in the config file.
+func runExec() {
 	// Loop through each processor...
 	for i := 0; i < len(configs.Processors); i++ {
 		// Walk the tree configured in the processor...retrieving the matched files.
@@ -199,199 +198,194 @@ func runProcessors() {
 	}
 }
 
-func runGitHead(repo *git.Repository, ref *plumbing.Reference) {
-	for i := 0; i < len(configs.Gits.Head); i++ {
-		// Handle the Head git config if it exists.
-		if (len(configs.Gits.Head[i].File) > 0) && (len(configs.Gits.Head[i].Template) > 0) {
-			// Grab the HEAD commit.
-			commit, err := repo.CommitObject(ref.Hash())
-			panicIfError(err)
-			commitStats, err := commit.Stats()
-			panicIfError(err)
+// runGitHead - Process Head mode git log processor.
+func runGitHead(repo *git.Repository, ref *plumbing.Reference, processor GitLog) {
+	// Grab the HEAD commit.
+	commit, err := repo.CommitObject(ref.Hash())
+	panicIfError(err)
+	commitStats, err := commit.Stats()
+	panicIfError(err)
 
-			// Process the file in the config as a template to create the file name.
-			fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(configs.Gits.Head[i].File)
-			panicIfError(err)
-			var templateFile bytes.Buffer
-			err = fileTemplate.Execute(&templateFile, GitLogEntry{
-				Commit: commit,
-				Stats:  commitStats,
-			})
-			panicIfError(err)
+	// Process the file in the config as a template to create the file name.
+	fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(processor.File)
+	panicIfError(err)
+	var templateFile bytes.Buffer
+	err = fileTemplate.Execute(&templateFile, GitLogEntry{
+		Commit: commit,
+		Stats:  commitStats,
+	})
+	panicIfError(err)
 
-			// Process the output template in the config.
-			outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Gits.Head[i].Template)
-			panicIfError(err)
-			var templateOut bytes.Buffer
-			err = outTemplate.Execute(&templateOut, GitLogEntry{
-				Commit: commit,
-				Stats:  commitStats,
-			})
-			panicIfError(err)
+	// Process the output template in the config.
+	outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(processor.Template)
+	panicIfError(err)
+	var templateOut bytes.Buffer
+	err = outTemplate.Execute(&templateOut, GitLogEntry{
+		Commit: commit,
+		Stats:  commitStats,
+	})
+	panicIfError(err)
 
-			// Create the file.
-			err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
-			panicIfError(err)
-			outFile, err := os.Create(templateFile.String())
-			panicIfError(err)
-			defer outFile.Close()
+	// Create the file.
+	err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
+	panicIfError(err)
+	outFile, err := os.Create(templateFile.String())
+	panicIfError(err)
+	defer outFile.Close()
 
-			// Write the output to the file.
-			_, err = outFile.WriteString(templateOut.String())
-			panicIfError(err)
-		}
-	}
+	// Write the output to the file.
+	_, err = outFile.WriteString(templateOut.String())
+	panicIfError(err)
 }
 
-func runGitEach(repo *git.Repository, ref *plumbing.Reference) {
-	for i := 0; i < len(configs.Gits.Each); i++ {
-		// Handle the Each git config if it exists.
-		if (len(configs.Gits.Each[i].File) > 0) && (len(configs.Gits.Each[i].Template) > 0) {
-			// Get the commit history in an interator.
-			commitIter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
-			panicIfError(err)
+// runGitEach - Process Each mode git log processor.
+func runGitEach(repo *git.Repository, ref *plumbing.Reference, processor GitLog) {
+	// Get the commit history in an interator.
+	commitIter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
+	panicIfError(err)
 
-			// Iterate through the commits.
-			err = commitIter.ForEach(func(commit *object.Commit) error {
-				// Grab the commit stats.
-				commitStats, err := commit.Stats()
-				panicIfError(err)
-				defer commitIter.Close()
+	// Iterate through the commits.
+	err = commitIter.ForEach(func(commit *object.Commit) error {
+		// Grab the commit stats.
+		commitStats, err := commit.Stats()
+		panicIfError(err)
+		defer commitIter.Close()
 
-				// Process the file in the config as a template to create the file name.
-				fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(configs.Gits.Each[i].File)
-				panicIfError(err)
-				var templateFile bytes.Buffer
-				err = fileTemplate.Execute(&templateFile, GitLogEntry{
-					Commit: commit,
-					Stats:  commitStats,
-				})
-				panicIfError(err)
+		// Process the file in the config as a template to create the file name.
+		fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(processor.File)
+		panicIfError(err)
+		var templateFile bytes.Buffer
+		err = fileTemplate.Execute(&templateFile, GitLogEntry{
+			Commit: commit,
+			Stats:  commitStats,
+		})
+		panicIfError(err)
 
-				// Process the output template in the config.
-				outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Gits.Each[i].Template)
-				panicIfError(err)
-				var templateOut bytes.Buffer
-				err = outTemplate.Execute(&templateOut, GitLogEntry{
-					Commit: commit,
-					Stats:  commitStats,
-				})
-				panicIfError(err)
+		// Process the output template in the config.
+		outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(processor.Template)
+		panicIfError(err)
+		var templateOut bytes.Buffer
+		err = outTemplate.Execute(&templateOut, GitLogEntry{
+			Commit: commit,
+			Stats:  commitStats,
+		})
+		panicIfError(err)
 
-				// Create the file.
-				err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
-				panicIfError(err)
-				outFile, err := os.Create(templateFile.String())
-				panicIfError(err)
-				defer outFile.Close()
+		// Create the file.
+		err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
+		panicIfError(err)
+		outFile, err := os.Create(templateFile.String())
+		panicIfError(err)
+		defer outFile.Close()
 
-				// Write the output to the file.
-				_, err = outFile.WriteString(templateOut.String())
-				panicIfError(err)
+		// Write the output to the file.
+		_, err = outFile.WriteString(templateOut.String())
+		panicIfError(err)
 
-				return nil
-			})
-			panicIfError(err)
-		}
-	}
+		return nil
+	})
+	panicIfError(err)
 }
 
-func runGitAll(repo *git.Repository, ref *plumbing.Reference) {
-	for i := 0; i < len(configs.Gits.All); i++ {
-		// Handle the All git config if it exists.
-		if (len(configs.Gits.All[i].File) > 0) && (len(configs.Gits.All[i].Template) > 0) {
-			// Get the commit history in an interator.
-			commitIter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
-			panicIfError(err)
-			defer commitIter.Close()
+// runGitAll - Process All mode git log processor.
+func runGitAll(repo *git.Repository, ref *plumbing.Reference, processor GitLog) {
+	// Get the commit history in an interator.
+	commitIter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
+	panicIfError(err)
+	defer commitIter.Close()
 
-			var allGit GitAll
+	var allGit GitAll
 
-			// Grab the HEAD commit.
-			allGit.Head.Commit, err = repo.CommitObject(ref.Hash())
-			panicIfError(err)
-			allGit.Head.Stats, err = allGit.Head.Commit.Stats()
-			panicIfError(err)
+	// Grab the HEAD commit.
+	allGit.Head.Commit, err = repo.CommitObject(ref.Hash())
+	panicIfError(err)
+	allGit.Head.Stats, err = allGit.Head.Commit.Stats()
+	panicIfError(err)
 
-			// Iterate through the commits.
-			// allGit.Commits = []GitLogEntry{}
-			err = commitIter.ForEach(func(commit *object.Commit) error {
-				commitStats, err := commit.Stats()
-				panicIfError(err)
-				allGit.Commits = append(allGit.Commits, GitLogEntry{
-					Commit: commit,
-					Stats:  commitStats,
-				})
-				return nil
-			})
-			panicIfError(err)
+	// Iterate through the commits.
+	// allGit.Commits = []GitLogEntry{}
+	err = commitIter.ForEach(func(commit *object.Commit) error {
+		commitStats, err := commit.Stats()
+		panicIfError(err)
+		allGit.Commits = append(allGit.Commits, GitLogEntry{
+			Commit: commit,
+			Stats:  commitStats,
+		})
+		return nil
+	})
+	panicIfError(err)
 
-			// Process the file in the config as a template to create the file name.
-			fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(configs.Gits.All[i].File)
-			panicIfError(err)
-			var templateFile bytes.Buffer
-			err = fileTemplate.Execute(&templateFile, allGit)
-			panicIfError(err)
+	// Process the file in the config as a template to create the file name.
+	fileTemplate, err := template.New("fileTemplate").Funcs(funcMap).Parse(processor.File)
+	panicIfError(err)
+	var templateFile bytes.Buffer
+	err = fileTemplate.Execute(&templateFile, allGit)
+	panicIfError(err)
 
-			// Process the output template in the config.
-			outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(configs.Gits.All[i].Template)
-			panicIfError(err)
-			var templateOut bytes.Buffer
-			err = outTemplate.Execute(&templateOut, allGit)
-			panicIfError(err)
+	// Process the output template in the config.
+	outTemplate, err := template.New("outTemplate").Funcs(funcMap).Parse(processor.Template)
+	panicIfError(err)
+	var templateOut bytes.Buffer
+	err = outTemplate.Execute(&templateOut, allGit)
+	panicIfError(err)
 
-			// Create the file.
-			err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
-			panicIfError(err)
-			outFile, err := os.Create(templateFile.String())
-			panicIfError(err)
-			defer outFile.Close()
+	// Create the file.
+	err = os.MkdirAll(filepath.Dir(templateFile.String()), 0755)
+	panicIfError(err)
+	outFile, err := os.Create(templateFile.String())
+	panicIfError(err)
+	defer outFile.Close()
 
-			// Write the output to the file.
-			_, err = outFile.WriteString(templateOut.String())
-			panicIfError(err)
-		}
-	}
+	// Write the output to the file.
+	_, err = outFile.WriteString(templateOut.String())
+	panicIfError(err)
 }
 
 // runGits - Process the configured git log handlers.
 func runGits() {
-	// Define the path to the git repository.
-	var repoPath string
-	if configs.Gits.Path != "" {
-		repoPath = configs.Gits.Path
-	} else {
-		repoPath = "."
-	}
+	// Iterate through the configured git log handlers.
+	for i := 0; i < len(configs.Gits); i++ {
+		// Define the path to the git repository.
+		var repoPath string
+		if configs.Gits[i].Path != "" {
+			repoPath = configs.Gits[i].Path
+		} else {
+			repoPath = "."
+		}
 
-	// Open the repository.
-	repo, err := git.PlainOpen(repoPath)
-	panicIfError(err)
+		// Open the repository.
+		repo, err := git.PlainOpen(repoPath)
+		panicIfError(err)
 
-	// Get the HEAD commit.
-	ref, err := repo.Head()
-	panicIfError(err)
+		// Get the HEAD commit.
+		ref, err := repo.Head()
+		panicIfError(err)
 
-	// If there is are Head git handlers, process them.
-	if len(configs.Gits.Head) > 0 {
-		runGitHead(repo, ref)
-	}
-
-	// If there is are Each git handlers, process them.
-	if len(configs.Gits.Each) > 0 {
-		runGitEach(repo, ref)
-	}
-
-	// If there is are All git handlers, process them.
-	if len(configs.Gits.All) > 0 {
-		runGitAll(repo, ref)
+		// Iterate through the configured processors.
+		for j := 0; j < len(configs.Gits[i].Processors); j++ {
+			if configs.Gits[i].Processors[j].Mode != "" {
+				// Get the mode.
+				switch strings.ToLower(configs.Gits[i].Processors[j].Mode) {
+				case "head":
+					// Process the HEAD git config.
+					runGitHead(repo, ref, configs.Gits[i].Processors[j])
+				case "each":
+					// Process the Each git config.
+					runGitEach(repo, ref, configs.Gits[i].Processors[j])
+				case "all":
+					// Process the All git config.
+					runGitAll(repo, ref, configs.Gits[i].Processors[j])
+				}
+			}
+		}
 	}
 }
 
+// run - Run the program.
 func run() {
-	// Run the git log processors.
+	// Run the git processors.
 	runGits()
 
 	// Run the file find processors.
-	runProcessors()
+	runExec()
 }
