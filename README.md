@@ -37,18 +37,15 @@ exec:
     command: echo {{ . }}
 ```
 
-The `git` key defines how to handle processing of git log data into Hugo files.  The `git` parameters are as follows:
+The `git` key  is an array object, with each array element defined as follows:
 
 * `path` - Defines the path to the git repo (default: ".")
-* `head` - Array of processors for processing the HEAD commit. Only the HEAD commit will be read and passed through the processors.
+* `processors` - Array of git log handlers.
+  * `mode` - Values of `head` (only the head commit), `each` (each log entry passed through the processor), or `all` (all entries passed through the processor).
   * `file` - The file to output; processed as a template.
   * `template` - The template through which the git log entry/entries will be processed and then written to `file`.
-* `each` - Array of processors for iterating through every commit; executing the filename and output templates for each commit.
-  * Same as `head`.
-* `all` - For passing the entire git log to the template in a large structure.
-  * Same as `head`.
 
-The `processors` key is an array object, with each array element defined as follows:
+The `exec` key is an array object, with each array element defined as follows:
 
 * `path` - The top-level path that will be walked and scanned for matching filenames.
 * `pattern` - The pattern used to match the filenames while walking the `path` contents recursively.
