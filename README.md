@@ -53,6 +53,8 @@ The `exec` key is an array object, with each array element defined as follows:
 
 The array entries will be executed serially, in the order in which they are defined.
 
+![Configuration Data Structure](config-data-model.svg)
+
 ## Go Templates
 
 We are using Go Templates to process the `command` key in each `processors` object.  This allows for the command to use the matched file name (and derivations of it) as part of the `command`.
