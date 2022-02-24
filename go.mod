@@ -3,6 +3,7 @@ module github.com/jason-dour/hugo-preproc
 go 1.17
 
 require (
+	github.com/fatih/structs v1.1.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.3.0

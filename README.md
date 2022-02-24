@@ -16,7 +16,15 @@ Intended to assist with any sort of pre-processing desired for publishing files,
 
 ## Use
 
-First, define a configuration file.  By default, the config filename is `.hugo-preproc.yaml`.  There are two primary keys: `git` and `processors`, such as this example:
+A configuration file is used to define processing.  By default, the config filename is `.hugo-preproc.yaml` (or `.toml`, or `.json`).
+
+You can specify a config file on command line with the `-c`/`--config` option.
+
+Execute the command and processing occurs based on the configuration.
+
+## Configuration Syntax
+
+The file has two primary keys: `git` and `processors`, such as this example:
 
 ``` yaml
 git:
@@ -25,12 +33,12 @@ git:
       - mode: head | each | all
         file: path/to/output/file1
         template: |
-          Entry {{ . }}
+          Entry {{ .<field> }}
   - path: path/to/repo
     processors:
       - mode: head | each | all
-        file: path/to/output/file2
-        template: "Entry {{ . }}"
+        file: path/to/output/{{ .Commit.Hash }}
+        template: "Entry {{ .<field> }}"
 exec:
   - path: path/to/top/directory
     pattern: "*.md"
@@ -41,7 +49,7 @@ The `git` key  is an array object, with each array element defined as follows:
 
 * `path` - Defines the path to the git repo (default: ".")
 * `processors` - Array of git log handlers.
-  * `mode` - Values of `head` (only the head commit), `each` (each log entry passed through the processor), or `all` (all entries passed through the processor).
+  * `mode` - Values of `head` (only the head commit), `each` (each log entry passed through the processor, consecutively), or `all` (all entries passed through the processor).
   * `file` - The file to output; processed as a template.
   * `template` - The template through which the git log entry/entries will be processed and then written to `file`.
 
@@ -57,10 +65,13 @@ The array entries will be executed serially, in the order in which they are defi
 
 ## Go Templates
 
-We are using Go Templates to process the `command` key in each `processors` object.  This allows for the command to use the matched file name (and derivations of it) as part of the `command`.
+We are using Go Templates to process the `file` and `template` keys in each `git` handler, as well as the `command` key in each `processors` object.
 
 Other than standard Go Template functions, we also add:
 
+* `fields` - `structs.Names`
+  * Will return an array of strings of the field names of the input.
+  * Can be used to inspect input object fields.
 * `replace` - `strings.Replace`
   * Use: `{{replace <input> <search> <replace> <n>}}`
   * Example:
@@ -72,6 +83,65 @@ Other than standard Go Template functions, we also add:
 * `trimsuffix` - `strings.TrimSuffix`
   * Use: `{{trimsuffix <input> <trim_string>}}`
 
-This allows for a reasonably easy way to specify complex commands for processing files prior to the Hugo run.
-
 Other template functions can be added or mapped in as this codebase evolves.
+
+## Go Template Input
+
+We provide the following input for the configured handlers.
+
+* `git` handlers
+  * `head` and `each`
+
+    ``` go
+    . {
+      Commit {
+        Hash string
+        Author string
+        Committer string
+        Message string
+        TreeHash string
+        ParentHashes []string
+        PGPSignature string
+      }
+      Stats []string
+    }
+    ```
+
+  * `all`
+
+    ``` go
+    . {
+      // Array of Commits
+      Commits []{
+        Commit {
+          Hash         string   // Hash of the commit object.
+          Author       string   // Author is the original author of the commit.
+          Committer    string   // Committer is the one performing the commit,
+                                // might be different from Author.
+          Message      string   // Message is the commit message, contains arbitrary text.
+          TreeHash     string   // TreeHash is the hash of the root tree of the commit.
+          ParentHashes []string // ParentHashes are the hashes of the parent commits of the commit.
+          PGPSignature string   // PGPSignature is the PGP signature of the commit.
+        }
+        Stats []string
+      }
+      // Head Commit
+      Head {
+        Commit {
+          Hash         string
+          Author       string
+          Committer    string
+          Message      string
+          TreeHash     string
+          ParentHashes []string
+          PGPSignature string
+        }
+        Stats []string
+      }
+    }
+    ```
+* `exec` handlers
+
+  ``` go
+  . string
+  ```
