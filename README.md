@@ -95,15 +95,16 @@ We provide the following input for the configured handlers.
     ``` go
     . {
       Commit {
-        Hash string
-        Author string
-        Committer string
-        Message string
-        TreeHash string
-        ParentHashes []string
-        PGPSignature string
+        Hash         string   // Hash of the commit object.
+        Author       string   // Author is the original author of the commit.
+        Committer    string   // Committer is the one performing the commit,
+                              // might be different from Author.
+        Message      string   // Message is the commit message, contains arbitrary text.
+        TreeHash     string   // TreeHash is the hash of the root tree of the commit.
+        ParentHashes []string // ParentHashes are the hashes of the parent commits of the commit.
+        PGPSignature string   // PGPSignature is the PGP signature of the commit.
       }
-      Stats []string
+      Stats []string // Array of strings for files changed and their stats.
     }
     ```
 
@@ -123,20 +124,21 @@ We provide the following input for the configured handlers.
           ParentHashes []string // ParentHashes are the hashes of the parent commits of the commit.
           PGPSignature string   // PGPSignature is the PGP signature of the commit.
         }
-        Stats []string
+        Stats []string // Array of strings for files changed and their stats.
       }
       // Head Commit
       Head {
         Commit {
-          Hash         string
-          Author       string
-          Committer    string
-          Message      string
-          TreeHash     string
-          ParentHashes []string
-          PGPSignature string
+          Hash         string   // Hash of the commit object.
+          Author       string   // Author is the original author of the commit.
+          Committer    string   // Committer is the one performing the commit,
+                                // might be different from Author.
+          Message      string   // Message is the commit message, contains arbitrary text.
+          TreeHash     string   // TreeHash is the hash of the root tree of the commit.
+          ParentHashes []string // ParentHashes are the hashes of the parent commits of the commit.
+          PGPSignature string   // PGPSignature is the PGP signature of the commit.
         }
-        Stats []string
+        Stats []string // Array of strings for files changed and their stats.
       }
     }
     ```
