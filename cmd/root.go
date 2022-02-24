@@ -13,6 +13,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/fatih/structs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -77,6 +78,7 @@ configured processors to be run on the Hugo datafiles.`,
 
 	// Map in the additional functions for the template.
 	funcMap = template.FuncMap{
+		"fields":     structs.Names,
 		"replace":    strings.Replace,
 		"split":      strings.Split,
 		"trimsuffix": strings.TrimSuffix,
