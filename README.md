@@ -31,14 +31,8 @@ git:
   - path: path/to/repo
     processors:
       - mode: head | each | all
-        file: path/to/output/file1
-        template: |
-          Entry {{ .<field> }}
-  - path: path/to/repo
-    processors:
-      - mode: head | each | all
         file: path/to/output/{{ .Commit.Hash }}
-        template: "Entry {{ .<field> }}"
+        template: Entry {{ .<field> }}
 exec:
   - path: path/to/top/directory
     pattern: "*.md"
