@@ -146,5 +146,6 @@ We provide the following input for the configured handlers.
 * `exec` handlers
 
   ``` go
-  . string
+  . string // String representing the matched filename,
+           // including its full path (handler top search path + sub-path to file).
   ```
