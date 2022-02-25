@@ -90,9 +90,17 @@ We provide the following input for the configured handlers.
     . {
       Commit {
         Hash         string   // Hash of the commit object.
-        Author       string   // Author is the original author of the commit.
-        Committer    string   // Committer is the one performing the commit,
+        Author       {        // Author is the original author of the commit.
+          Name  string    // Name of the Author.
+          Email string    // Email address of the Author.
+          When  time.Time // Date/time of the commit. 
+        }
+        Committer    {        // Committer is the one performing the commit,
                               // might be different from Author.
+          Name  string    // Name of the Committer.
+          Email string    // Email address of the Committer.
+          When  time.Time // Date/time of the commit. 
+        }
         Message      string   // Message is the commit message, contains arbitrary text.
         TreeHash     string   // TreeHash is the hash of the root tree of the commit.
         ParentHashes []string // ParentHashes are the hashes of the parent commits of the commit.
@@ -111,8 +119,16 @@ We provide the following input for the configured handlers.
         Commit {
           Hash         string   // Hash of the commit object.
           Author       string   // Author is the original author of the commit.
-          Committer    string   // Committer is the one performing the commit,
+            Name  string    // Name of the Author.
+            Email string    // Email address of the Author.
+            When  time.Time // Date/time of the commit. 
+          }
+          Committer    {        // Committer is the one performing the commit,
                                 // might be different from Author.
+            Name  string    // Name of the Committer.
+            Email string    // Email address of the Committer.
+            When  time.Time // Date/time of the commit. 
+          }
           Message      string   // Message is the commit message, contains arbitrary text.
           TreeHash     string   // TreeHash is the hash of the root tree of the commit.
           ParentHashes []string // ParentHashes are the hashes of the parent commits of the commit.
@@ -125,8 +141,16 @@ We provide the following input for the configured handlers.
         Commit {
           Hash         string   // Hash of the commit object.
           Author       string   // Author is the original author of the commit.
-          Committer    string   // Committer is the one performing the commit,
+            Name  string    // Name of the Author.
+            Email string    // Email address of the Author.
+            When  time.Time // Date/time of the commit. 
+          }
+          Committer    {        // Committer is the one performing the commit,
                                 // might be different from Author.
+            Name  string    // Name of the Committer.
+            Email string    // Email address of the Committer.
+            When  time.Time // Date/time of the commit. 
+          }
           Message      string   // Message is the commit message, contains arbitrary text.
           TreeHash     string   // TreeHash is the hash of the root tree of the commit.
           ParentHashes []string // ParentHashes are the hashes of the parent commits of the commit.
