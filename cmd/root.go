@@ -13,10 +13,12 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig"
 	"github.com/fatih/structs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/imdario/mergo"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -77,6 +79,7 @@ configured processors to be run on the Hugo datafiles.`,
 	}
 
 	// Map in the additional functions for the template.
+	// TODO: #8 Deprecate custom template functions in favor of the sprig functions.
 	funcMap = template.FuncMap{
 		"fields":     structs.Names,
 		"replace":    strings.Replace,
@@ -134,6 +137,10 @@ func init() {
 
 	// Define the command line flags.
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.hugo-preproc.yaml)")
+
+	// Merge the sprig template functions into our custom template functions.
+	err := mergo.Merge(&funcMap, sprig.TxtFuncMap())
+	panicIfError(err)
 }
 
 // initConfig reads in config file and ENV variables if set.

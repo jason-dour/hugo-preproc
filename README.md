@@ -77,7 +77,9 @@ Other than standard Go Template functions, we also add:
 * `trimsuffix` - `strings.TrimSuffix`
   * Use: `{{trimsuffix <input> <trim_string>}}`
 
-Other template functions can be added or mapped in as this codebase evolves.
+Additionally, we've now mapped the full library of [Masterminds/sprig](https://github.com/Masterminds/sprig) template functions.
+For `1.x` releases of `hugo-preproc` we will leave our custom template functions in place.  When we move to `2.x` releases, we
+will deprecate the above custom functions in favor of `sprig`.
 
 ## Go Template Input
 
