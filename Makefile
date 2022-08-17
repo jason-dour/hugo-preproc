@@ -21,8 +21,8 @@ windows:
 .PHONY: windows
 
 linux:
-	@env GOOS=linux GOARCH=386 go build -ldflags $(LDFLAGS) -o $(BASENAME)_v$(VERSION)_x32_linux
-	@env GOOS=linux GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(BASENAME)_v$(VERSION)_x64_linux
+	@env GOOS=linux GOARCH=386 go build -ldflags $(LDFLAGS) -o $(BASENAME)_v$(VERSION)_linux_x32
+	@env GOOS=linux GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(BASENAME)_v$(VERSION)_linux_x64
 .PHONY: linux
 
 macos:
