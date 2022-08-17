@@ -63,6 +63,12 @@ type Configs struct {
 }
 
 var (
+	// version - the version of the program; injected at compile time.
+	version string
+
+	// basename - the basename of the program; injected at compile time.
+	basename string
+
 	// Variable to process the YAML config into.
 	configs Configs
 
@@ -71,11 +77,12 @@ var (
 
 	// Cobra definition.
 	rootCmd = &cobra.Command{
-		Use:   "hugo-preproc",
+		Use:   basename,
 		Short: "A preprocessor for Hugo",
 		Long: `Hugo-preproc is a pre-processor for Hugo that allows for
 configured processors to be run on the Hugo datafiles.`,
-		Run: func(cmd *cobra.Command, args []string) { run() },
+		Run:     func(cmd *cobra.Command, args []string) { run() },
+		Version: version,
 	}
 
 	// Map in the additional functions for the template.

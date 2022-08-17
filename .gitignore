@@ -2,3 +2,4 @@
 *.tar.gz
 .hugo-preproc.yaml
 hugo-preproc
+hugo-preproc_v*
