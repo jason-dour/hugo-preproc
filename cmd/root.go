@@ -370,7 +370,10 @@ func runGits() {
 		}
 
 		// Open the repository.
-		repo, err := git.PlainOpen(repoPath)
+		repo, err := git.PlainOpenWithOptions(repoPath, &git.PlainOpenOptions{
+			DetectDotGit:          true,
+			EnableDotGitCommonDir: true,
+		})
 		panicIfError(err)
 
 		// Get the HEAD commit.
