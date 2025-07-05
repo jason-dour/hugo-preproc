@@ -32,14 +32,14 @@ tasks:
   release:
     desc: Build release files for all defined OS and ARCH.
     cmds:
+      - task: release:darwin
       - task: release:linux
       - task: release:windows
-      - task: release:darwin
 
   release:build:
     # desc: Build platform release.
     cmds:
-      - GOOS=linux GOARCH={{.ITEM}} go build -ldflags "{{.LD_FLAGS}}" -o {{.BASENAME}}_v{{.VERSION}}_{{.OS}}_{{.ARCH}} ./cmd/{{.BASENAME}}
+      - GOOS=linux GOARCH={{.ITEM}} go build -ldflags "{{.LD_FLAGS}}" -o {{.BASENAME}}_v{{.VERSION}}_{{.OS}}_{{.ARCH}}{{.EXE}} ./cmd/{{.BASENAME}}
 
   release:linux:
     desc: Build release files for Linux.
@@ -57,6 +57,7 @@ tasks:
         vars:
           OS: windows
           ARCH: "{{.ITEM}}"
+          EXE: .exe
         task: release:build
 
   release:darwin:
