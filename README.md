@@ -13,6 +13,7 @@ Intended to assist with any sort of pre-processing desired for publishing files,
   * Draw.io
   * Graphviz
   * etc.
+* Generate Markdown or data files for Hugo from Git history.
 
 ## Use
 
@@ -61,25 +62,8 @@ The array entries will be executed serially, in the order in which they are defi
 
 We are using Go Templates to process the `file` and `template` keys in each `git` handler, as well as the `command` key in each `processors` object.
 
-Other than standard Go Template functions, we also add:
-
-* `fields` - `structs.Names`
-  * Will return an array of strings of the field names of the input.
-  * Can be used to inspect input object fields.
-* `replace` - `strings.Replace`
-  * Use: `{{replace <input> <search> <replace> <n>}}`
-  * Example:
-    * Matched name: `example.drawio`
-    * `command`: `draw.io --export --output {{replace . ".md" ".svg" -1}} --format svg {{.}}`
-    * Template output used for `exec`: `draw.io --export --output example.svg --format svg example.drawio`
-* `split` - `strings.Split`
-  * Use: `{{split <input> <separator>}}`
-* `trimsuffix` - `strings.TrimSuffix`
-  * Use: `{{trimsuffix <input> <trim_string>}}`
-
-Additionally, we've now mapped the full library of [Masterminds/sprig](https://github.com/Masterminds/sprig) template functions.
-For `1.x` releases of `hugo-preproc` we will leave our custom template functions in place.  When we move to `2.x` releases, we
-will deprecate the above custom functions in favor of `sprig`.
+We've now mapped the full library of [Masterminds/sprig](https://github.com/Masterminds/sprig) template functions.
+As of `2.x` releases, all prior custom functions are deprecated.
 
 ## Go Template Input
 
