@@ -15,7 +15,7 @@ import (
 	"github.com/jason-dour/hugo-preproc/internal/cmn"
 )
 
-// panicifError was always a cheap hack; we're going to fix this soon.
+// panicIfError was always a cheap hack; we're going to fix this soon.
 func panicIfError(err error) {
 	// TODO - Replace all of the calls to this function with proper error handling.
 	if err != nil {
@@ -24,7 +24,7 @@ func panicIfError(err error) {
 }
 
 // Execs iterates through the exec command processors in the config file.
-func Execs(configs *cmn.Configs) {
+func Execs(configs *cmn.Configs) error {
 	// Loop through each processor...
 	for i := 0; i < len(configs.Processors); i++ {
 		// Walk the tree configured in the processor...retrieving the matched files.
@@ -49,10 +49,12 @@ func Execs(configs *cmn.Configs) {
 			panicIfError(err)
 		}
 	}
+
+	return nil
 }
 
 // gitHead - Process Head mode git log processor.
-func gitHead(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) {
+func gitHead(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) error {
 	// Grab the HEAD commit.
 	commit, err := repo.CommitObject(ref.Hash())
 	panicIfError(err)
@@ -89,10 +91,12 @@ func gitHead(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog
 	// Write the output to the file.
 	_, err = outFile.WriteString(templateOut.String())
 	panicIfError(err)
+
+	return nil
 }
 
 // gitEach - Process Each mode git log processor.
-func gitEach(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) {
+func gitEach(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) error {
 	// Get the commit history in an interator.
 	commitIter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
 	panicIfError(err)
@@ -138,10 +142,12 @@ func gitEach(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog
 		return nil
 	})
 	panicIfError(err)
+
+	return nil
 }
 
 // gitAll - Process All mode git log processor.
-func gitAll(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) {
+func gitAll(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) error {
 	// Get the commit history in an interator.
 	commitIter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
 	panicIfError(err)
@@ -192,10 +198,12 @@ func gitAll(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog)
 	// Write the output to the file.
 	_, err = outFile.WriteString(templateOut.String())
 	panicIfError(err)
+
+	return nil
 }
 
 // Gits - Process the configured git log handlers.
-func Gits(configs *cmn.Configs) {
+func Gits(configs *cmn.Configs) error {
 	// Iterate through the configured git log handlers.
 	for i := 0; i < len(configs.Gits); i++ {
 		// Define the path to the git repository.
@@ -235,4 +243,6 @@ func Gits(configs *cmn.Configs) {
 			}
 		}
 	}
+
+	return nil
 }

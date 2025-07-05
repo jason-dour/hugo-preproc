@@ -29,11 +29,22 @@ func init() {
 
 // run - Run the program.
 func run(cmd *cobra.Command, args []string) error {
+	cmn.Debug("run: begin")
+
 	// Run the git processors.
-	processors.Gits(cmn.Config)
+	cmn.Debug("run: running git processors")
+	err := processors.Gits(cmn.Config)
+	if err != nil {
+		return err
+	}
 
 	// Run the file find processors.
-	processors.Execs(cmn.Config)
+	cmn.Debug("run: running exec processors")
+	err = processors.Execs(cmn.Config)
+	if err != nil {
+		return err
+	}
 
+	cmn.Debug("run: end")
 	return nil
 }

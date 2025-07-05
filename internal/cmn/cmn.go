@@ -82,7 +82,7 @@ func InitConfig() {
 		// Find home directory.
 		home, err := os.UserHomeDir()
 		if err != nil {
-			fmt.Printf("No home directory found; looking for configuration file in current directory.\n")
+			fmt.Printf("No home directory found; looking for config file only in current directory.\n")
 			Debug("%s: no home directory found: %v", funcName, err.Error())
 		} else {
 			// Look in the home directory for the config file.
@@ -106,8 +106,8 @@ func InitConfig() {
 	// If a config file is found, read it in.
 	err := viper.ReadInConfig()
 	if err != nil {
-		fmt.Printf("error: error processing config file: %s\n", err.Error())
-		panic(err)
+		fmt.Fprintf(os.Stderr, "error: error processing config file: %s\n", err.Error())
+		os.Exit(1)
 	} else {
 		fmt.Printf("Using config file: %s\n", viper.ConfigFileUsed())
 	}
@@ -115,8 +115,8 @@ func InitConfig() {
 	// Unmarshal the configuration into the config struct.
 	err = viper.Unmarshal(&Config)
 	if err != nil {
-		fmt.Printf("error: error unmarshaling config file: %s\n", err.Error())
-		panic(err)
+		fmt.Fprintf(os.Stderr, "error: error unmarshaling config file: %s\n", err.Error())
+		os.Exit(1)
 	}
 
 	FuncMap := sprig.FuncMap()
@@ -127,26 +127,29 @@ func InitConfig() {
 
 // WalkMatch walks the tree and look for files matching the provided pattern.
 func WalkMatch(root, pattern string) ([]string, error) {
+	funcName := "cmn.WalkMatch"
+	Debug("%s: begin", funcName)
+
 	// Initialize the match list.
 	var matches []string
 
 	// Walk the tree.
+	// TODO - Update to WalkDir?
 	err := filepath.Walk(root,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-
 			if info.IsDir() {
+				Debug("%s: skipping directory: %s", funcName, path)
 				return nil
 			}
-
 			if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
 				return err
 			} else if matched {
+				Debug("%s: found match: %s", funcName, path)
 				matches = append(matches, path)
 			}
-
 			return nil
 		},
 	)
@@ -154,5 +157,8 @@ func WalkMatch(root, pattern string) ([]string, error) {
 		return nil, err
 	}
 
+	Debug("%s: found %d matches", funcName, len(matches))
+
+	Debug("%s: end", funcName)
 	return matches, nil
 }
