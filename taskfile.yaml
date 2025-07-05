@@ -1,0 +1,75 @@
+version: 3
+
+silent: true
+
+vars:
+  MODULE:
+    sh: awk '/^module/{print $2}' go.mod
+  BASENAME: "{{last (splitList \"/\" .MODULE)}}"
+  VERSION:
+    sh: cat VERSION
+  COMMIT:
+    sh: git show-ref --hash=7 HEAD
+  LD_FLAGS: "-X {{.MODULE}}/internal/cmn.Version={{.VERSION}} -X {{.MODULE}}/internal/cmn.Basename={{.BASENAME}} -X {{.MODULE}}/internal/cmn.Commit={{.COMMIT}}"
+
+tasks:
+  default:
+    - task: build
+
+  version:
+    desc: Show module and version information.
+    cmds:
+      - "echo MODULE: {{.MODULE}}"
+      - "echo BASENAME: {{.BASENAME}}"
+      - "echo VERSION: {{.VERSION}}"
+      - "echo COMMIT: {{.COMMIT}}"
+
+  build:
+    desc: Build for current OS and architecture.
+    cmds:
+      - go build -ldflags "{{.LD_FLAGS}}" ./cmd/{{.BASENAME}}
+
+  release:
+    desc: Build release files for all defined OS and ARCH.
+    cmds:
+      - task: release:darwin
+      - task: release:linux
+      - task: release:windows
+
+  release:build:
+    # desc: Build platform release.
+    cmds:
+      - GOOS=linux GOARCH={{.ITEM}} go build -ldflags "{{.LD_FLAGS}}" -o {{.BASENAME}}_v{{.VERSION}}_{{.OS}}_{{.ARCH}}{{.EXE}} ./cmd/{{.BASENAME}}
+
+  release:linux:
+    desc: Build release files for Linux.
+    cmds:
+      - for: ["386", amd64, arm, arm64]
+        vars:
+          OS: linux
+          ARCH: "{{.ITEM}}"
+        task: release:build
+
+  release:windows:
+    desc: Build release files for Windows.
+    cmds:
+      - for: ["386", amd64, arm64]
+        vars:
+          OS: windows
+          ARCH: "{{.ITEM}}"
+          EXE: .exe
+        task: release:build
+
+  release:darwin:
+    desc: Build release files for MacOS.
+    cmds:
+      - for: [amd64, arm64]
+        vars:
+          OS: darwin
+          ARCH: "{{.ITEM}}"
+        task: release:build
+
+  clean:
+    desc: Clean up the environment.
+    cmds:
+      - rm -rf {{.BASENAME}} {{.BASENAME}}_v*
