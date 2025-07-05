@@ -96,7 +96,7 @@ func InitConfig() {
 
 		// Define the config file name.
 		viper.SetConfigName(".hugo-preproc")
-		Debug("%s: default config file prefix: .hugo-preproc")
+		Debug("%s: default config file prefix: .hugo-preproc", funcName)
 	}
 
 	// Read in environment variables that match
