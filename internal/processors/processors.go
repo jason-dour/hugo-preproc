@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -29,7 +30,7 @@ func Execs(configs *cmn.Configs) error {
 		// Loop through each file matched...
 		for j := range files {
 			// Process the command in the processor as a template.
-			outTemplate, err := template.New("outTemplate").Funcs(cmn.FuncMap).Parse(configs.Processors[i].Command)
+			outTemplate, err := template.New("outTemplate").Funcs(sprig.FuncMap()).Parse(configs.Processors[i].Command)
 			if err != nil {
 				return err
 			}
@@ -67,7 +68,7 @@ func gitHead(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog
 	}
 
 	// Process the file in the config as a template to create the file name.
-	fileTemplate, err := template.New("fileTemplate").Funcs(cmn.FuncMap).Parse(processor.File)
+	fileTemplate, err := template.New("fileTemplate").Funcs(sprig.FuncMap()).Parse(processor.File)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func gitHead(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog
 	}
 
 	// Process the output template in the config.
-	outTemplate, err := template.New("outTemplate").Funcs(cmn.FuncMap).Parse(processor.Template)
+	outTemplate, err := template.New("outTemplate").Funcs(sprig.FuncMap()).Parse(processor.Template)
 	if err != nil {
 		return err
 	}
@@ -132,7 +133,7 @@ func gitEach(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog
 		defer commitIter.Close()
 
 		// Process the file in the config as a template to create the file name.
-		fileTemplate, err := template.New("fileTemplate").Funcs(cmn.FuncMap).Parse(processor.File)
+		fileTemplate, err := template.New("fileTemplate").Funcs(sprig.FuncMap()).Parse(processor.File)
 		if err != nil {
 			return err
 		}
@@ -146,7 +147,7 @@ func gitEach(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog
 		}
 
 		// Process the output template in the config.
-		outTemplate, err := template.New("outTemplate").Funcs(cmn.FuncMap).Parse(processor.Template)
+		outTemplate, err := template.New("outTemplate").Funcs(sprig.FuncMap()).Parse(processor.Template)
 		if err != nil {
 			return err
 		}
@@ -224,7 +225,7 @@ func gitAll(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog)
 	}
 
 	// Process the file in the config as a template to create the file name.
-	fileTemplate, err := template.New("fileTemplate").Funcs(cmn.FuncMap).Parse(processor.File)
+	fileTemplate, err := template.New("fileTemplate").Funcs(sprig.FuncMap()).Parse(processor.File)
 	if err != nil {
 		return err
 	}
@@ -235,7 +236,7 @@ func gitAll(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog)
 	}
 
 	// Process the output template in the config.
-	outTemplate, err := template.New("outTemplate").Funcs(cmn.FuncMap).Parse(processor.Template)
+	outTemplate, err := template.New("outTemplate").Funcs(sprig.FuncMap()).Parse(processor.Template)
 	if err != nil {
 		return err
 	}

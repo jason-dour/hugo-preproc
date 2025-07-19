@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/spf13/viper"
 )
@@ -51,8 +49,6 @@ var (
 	CfgFile string // Used for flags.
 
 	DebugFlag bool // Whether debug output is enabled.
-
-	FuncMap template.FuncMap // Map of Sprig functions.
 )
 
 var (
@@ -118,9 +114,6 @@ func InitConfig() {
 		fmt.Fprintf(os.Stderr, "error: error unmarshaling config file: %s\n", err.Error())
 		os.Exit(1)
 	}
-
-	FuncMap := sprig.FuncMap()
-	Debug("%s: FuncMap: %d functions mapped.", funcName, len(FuncMap))
 
 	Debug("%s: end", funcName)
 }
