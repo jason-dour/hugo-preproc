@@ -1,4 +1,4 @@
-// Package processors provide the various functions to run processors.
+// Package processors provides the various functions to run processors.
 package processors
 
 import (
