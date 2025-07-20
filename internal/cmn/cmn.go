@@ -4,6 +4,7 @@ package cmn
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -22,26 +23,28 @@ type (
 		Head    GitLogEntry
 	} // GitAll - Entire Git log.
 
-	GitLog struct {
+	GitProcessor struct {
 		Mode     string `mapstructure:"mode"`
 		File     string `mapstructure:"file"`
 		Template string `mapstructure:"template"`
-	} // GitLog - Configuration structure for processing git log entries.
+		Script   string `mapstructure:"script"`
+	} // GitProcessor - Configuration structure for processing git log entries.
 
 	Git struct {
-		Path       string   `mapstructure:"path"`
-		Processors []GitLog `mapstructure:"processors"`
+		Path       string         `mapstructure:"path"`
+		Processors []GitProcessor `mapstructure:"processors"`
 	} // Git - Configuration for handling git log entries.
 
-	Exec struct {
+	ExecProcessor struct {
 		Path    string `mapstructure:"path"`
 		Pattern string `mapstructure:"pattern"`
 		Command string `mapstructure:"command"`
-	} // Processor - Configuration structure for a single processor.
+		Script  string `mapstructure:"script"`
+	} // ExecProcessor - Configuration structure for a single exec.
 
 	Configs struct {
-		Gits  []Git  `mapstructure:"git,flow"`
-		Execs []Exec `mapstructure:"exec,flow"`
+		Gits  []Git           `mapstructure:"git,flow"`
+		Execs []ExecProcessor `mapstructure:"exec,flow"`
 	} // Configs - Array of processor configs.
 )
 
@@ -59,7 +62,7 @@ var (
 )
 
 // Debug writes debug output to Stderr if DebugFlag is true.
-func Debug(format string, args ...interface{}) {
+func Debug(format string, args ...any) {
 	if DebugFlag {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("debug: "+format, args...))
 	}
@@ -127,9 +130,8 @@ func WalkMatch(root, pattern string) ([]string, error) {
 	var matches []string
 
 	// Walk the tree.
-	// TODO - Update to WalkDir?
-	err := filepath.Walk(root,
-		func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(root,
+		func(path string, info fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}

@@ -67,7 +67,7 @@ func Execs(configs *cmn.Configs) error {
 }
 
 // gitHead - Process Head mode git log processor.
-func gitHead(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) error {
+func gitHead(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitProcessor) error {
 	funcName := "processors.gitHead"
 	cmn.Debug("%s: begin", funcName)
 
@@ -139,7 +139,7 @@ func gitHead(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog
 }
 
 // gitEach - Process Each mode git log processor.
-func gitEach(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) error {
+func gitEach(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitProcessor) error {
 	funcName := "processors.gitEach"
 	cmn.Debug("%s: begin", funcName)
 
@@ -221,7 +221,7 @@ func gitEach(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog
 }
 
 // gitAll - Process All mode git log processor.
-func gitAll(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitLog) error {
+func gitAll(repo *git.Repository, ref *plumbing.Reference, processor cmn.GitProcessor) error {
 	funcName := "processors.gitAll"
 	cmn.Debug("%s: begin", funcName)
 
@@ -338,7 +338,7 @@ func Gits(configs *cmn.Configs) error {
 		if err != nil {
 			return err
 		}
-		cmn.Debug("%s: repo opened")
+		cmn.Debug("%s: repo opened", funcName)
 
 		// Get the HEAD commit.
 		ref, err := repo.Head()

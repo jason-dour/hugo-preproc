@@ -56,7 +56,7 @@ The `exec` key is an array object, with each array element defined as follows:
 
 The array entries will be executed serially, in the order in which they are defined.
 
-![Configuration Data Structure](config-data-model.svg)
+![Configuration Data Structure](config-data-model.drawio.svg)
 
 ## Go Templates
 
