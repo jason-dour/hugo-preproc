@@ -118,7 +118,43 @@ func InitConfig() {
 		os.Exit(1)
 	}
 
+	err = checkConfig(Config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %s\n", err.Error())
+		os.Exit(1)
+	}
+
 	Debug("%s: end", funcName)
+}
+
+// checkConfig checks for configuration cases that conflict.
+func checkConfig(configs *Configs) error {
+	funcName := "cmn.checkConfig"
+	Debug("%s: begin", funcName)
+
+	Debug("%s: checking execs", funcName)
+	for i := range configs.Execs {
+		Debug("%s: exec %d", funcName, i)
+		if (len(configs.Execs[i].Command) > 0) && (len(configs.Execs[i].Script) > 0) {
+			Debug("%s: exec %d: config conflict; both command and script defined", funcName, i)
+			return fmt.Errorf("%s: exec %d: config conflict; both command and script defined", funcName, i)
+		}
+	}
+
+	Debug("%s: checking gits", funcName)
+	for j := range configs.Gits {
+		Debug("%s: git %d: checking processors", funcName, j)
+		for k := range configs.Gits[j].Processors {
+			Debug("%s: git %d: processor %d", funcName, j, k)
+			if (len(configs.Gits[j].Processors[k].Template) > 0) && (len(configs.Gits[j].Processors[k].Script) > 0) {
+				Debug("%s: git %d: processor: %d: config conflict; both template and script defined", funcName, j, k)
+				return fmt.Errorf("%s: git %d: processor: %d: config conflict; both template and script defined", funcName, j, k)
+			}
+		}
+	}
+
+	Debug("%s: end", funcName)
+	return nil
 }
 
 // WalkMatch walks the tree and look for files matching the provided pattern.
