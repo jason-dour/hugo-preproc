@@ -40,8 +40,8 @@ type (
 	} // Processor - Configuration structure for a single processor.
 
 	Configs struct {
-		Gits       []Git  `mapstructure:"git,flow"`
-		Processors []Exec `mapstructure:"exec,flow"`
+		Gits  []Git  `mapstructure:"git,flow"`
+		Execs []Exec `mapstructure:"exec,flow"`
 	} // Configs - Array of processor configs.
 )
 
