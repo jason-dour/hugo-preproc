@@ -40,6 +40,7 @@ type (
 		Pattern string `mapstructure:"pattern"`
 		Command string `mapstructure:"command"`
 		Script  string `mapstructure:"script"`
+		Mode    string `mapstructure:"mode"`
 	} // ExecProcessor - Configuration structure for a single exec.
 
 	Configs struct {

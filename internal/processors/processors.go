@@ -11,11 +11,119 @@ import (
 	"strings"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/stdlib"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/jason-dour/hugo-preproc/internal/cmn"
 )
+
+// cmdEach runs the given command for every file.
+func cmdEach(command string, files []string) error {
+	funcName := "processors.cmdEach"
+	cmn.Debug("%s: begin", funcName)
+
+	cmn.Debug("%s: command: %s", funcName, command)
+
+	for i := range files {
+		// Process the command in the processor as a template.
+		outTemplate, err := template.New("outTemplate").Funcs(sprig.FuncMap()).Parse(command)
+		if err != nil {
+			return err
+		}
+
+		// Convert the template to output string.
+		var templateOut bytes.Buffer
+		err = outTemplate.Execute(&templateOut, files[i])
+		if err != nil {
+			return err
+		}
+		cmn.Debug("%s: file %d: command: %s", funcName, i, templateOut.String())
+
+		// Execute the command and grab the output.
+		cmn.Debug("%s: executing command", funcName)
+		cmd := exec.Command("sh", "-c", templateOut.String())
+		cmd.Stdout = os.Stdout
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	cmn.Debug("%s: end", funcName)
+	return nil
+}
+
+// makeScript takes the provided script definition and returns a script instance.
+func makeScript(script string) *tengo.Compiled {
+	funcName := "processors.makeScript"
+	cmn.Debug("%s: begin", funcName)
+
+	var scr *tengo.Script
+	if strings.HasPrefix(script, "file://") {
+		cmn.Debug("%s: reading script from file: %s", funcName, script[6:])
+	} else {
+		scr = tengo.NewScript([]byte(script))
+	}
+
+	scr.SetImports(stdlib.GetModuleMap(stdlib.AllModuleNames()...))
+	scr.Add("files", nil)
+	scr.Add("file", nil)
+
+	compiled, err := scr.Compile()
+	if err != nil {
+		return nil
+	}
+
+	cmn.Debug("%s: end", funcName)
+	return compiled
+}
+
+// scriptEach runs the script once for each file.
+func scriptEach(script string, files []string) error {
+	funcName := "processors.scriptEach"
+	cmn.Debug("%s: begin", funcName)
+
+	scr := makeScript(script)
+
+	for i := range files {
+		cmn.Debug("%s: setting file: %v", funcName, files[i])
+		err := scr.Set("file", files[i])
+		if err != nil {
+			return err
+		}
+		cmn.Debug("%s: run script", funcName)
+		err = scr.Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	cmn.Debug("%s: end", funcName)
+	return nil
+}
+
+// scriptAll runs the script once for all files.
+func scriptAll(script string, files []string) error {
+	funcName := "processors.scriptAll"
+	cmn.Debug("%s: begin", funcName)
+
+	scr := makeScript(script)
+	cmn.Debug("%s: setting files: %v", funcName, files)
+	err := scr.Set("files", &StringArray{Value: files})
+	if err != nil {
+		return err
+	}
+	cmn.Debug("%s: run script", funcName)
+	err = scr.Run()
+	if err != nil {
+		return err
+	}
+
+	cmn.Debug("%s: end", funcName)
+	return nil
+}
 
 // Execs iterates through the exec command processors in the config file.
 func Execs(configs *cmn.Configs) error {
@@ -33,31 +141,44 @@ func Execs(configs *cmn.Configs) error {
 		if err != nil {
 			return err
 		}
+		if len(files) > 0 {
+			cmn.Debug("%s: exec %d: found %d files", funcName, i, len(files))
+		} else {
+			cmn.Debug("%s: exec %d: found no files, skipping", funcName, i)
+			return nil
+		}
 
-		// Loop through each file matched...
-		cmn.Debug("%s: iterating found files: %d", funcName, len(files))
-		for j := range files {
-			// Process the command in the processor as a template.
-			outTemplate, err := template.New("outTemplate").Funcs(sprig.FuncMap()).Parse(configs.Execs[i].Command)
+		// If running commands not scripts...
+		if len(configs.Execs[i].Command) > 0 {
+			// ...assume mode is `each` and process.
+			cmn.Debug("%s: exec %d: running command per file", funcName, i)
+			err := cmdEach(configs.Execs[i].Command, files)
 			if err != nil {
 				return err
 			}
+		}
 
-			// Convert the template to output string.
-			var templateOut bytes.Buffer
-			err = outTemplate.Execute(&templateOut, files[j])
-			if err != nil {
-				return err
-			}
-			cmn.Debug("%s: exec %d: file %d: command: %s", funcName, i, j, templateOut.String())
-
-			// Execute the command and grab the output.
-			cmn.Debug("%s: executing command", funcName)
-			cmd := exec.Command("sh", "-c", templateOut.String())
-			cmd.Stdout = os.Stdout
-			err = cmd.Run()
-			if err != nil {
-				return err
+		// If running scripts not commands...
+		if len(configs.Execs[i].Script) > 0 {
+			// ...determine the mode.
+			switch strings.ToLower(configs.Execs[i].Mode) {
+			case "":
+				fallthrough
+			case "each":
+				cmn.Debug("%s: exec %d: script mode: each", funcName, i)
+				err := scriptEach(configs.Execs[i].Script, files)
+				if err != nil {
+					return err
+				}
+			case "all":
+				cmn.Debug("%s: exec %d: script mode: all", funcName, i)
+				err := scriptAll(configs.Execs[i].Script, files)
+				if err != nil {
+					return err
+				}
+			default:
+				cmn.Debug("%s: exec %d: invalid script mode: %s", funcName, i, configs.Execs[i].Mode)
+				return fmt.Errorf("invalid exec processor script mode; should be each/all")
 			}
 		}
 	}
@@ -351,34 +472,31 @@ func Gits(configs *cmn.Configs) error {
 		cmn.Debug("%s: git %d: iterating processors: %d", funcName, i, len(configs.Gits))
 		for j := range configs.Gits[i].Processors {
 			cmn.Debug("%s: git %d: processor %d", funcName, i, j)
-			if configs.Gits[i].Processors[j].Mode != "" {
-				// Get the mode.
-				switch strings.ToLower(configs.Gits[i].Processors[j].Mode) {
-				case "head":
-					// Process the HEAD git config.
-					cmn.Debug("%s: git %d: processor %d: mode: head", funcName, i, j)
-					err := gitHead(repo, ref, configs.Gits[i].Processors[j])
-					if err != nil {
-						return err
-					}
-				case "each":
-					// Process the Each git config.
-					cmn.Debug("%s: git %d: processor %d: mode: each", funcName, i, j)
-					err := gitEach(repo, ref, configs.Gits[i].Processors[j])
-					if err != nil {
-						return err
-					}
-				case "all":
-					// Process the All git config.
-					cmn.Debug("%s: git %d: processor %d: mode: all", funcName, i, j)
-					err := gitAll(repo, ref, configs.Gits[i].Processors[j])
-					if err != nil {
-						return err
-					}
-				default:
-					err := fmt.Errorf("invalid git processor mode; should be head/each/all")
+			// Get the mode.
+			switch strings.ToLower(configs.Gits[i].Processors[j].Mode) {
+			case "head":
+				// Process the HEAD git config.
+				cmn.Debug("%s: git %d: processor %d: mode: head", funcName, i, j)
+				err := gitHead(repo, ref, configs.Gits[i].Processors[j])
+				if err != nil {
 					return err
 				}
+			case "each":
+				// Process the Each git config.
+				cmn.Debug("%s: git %d: processor %d: mode: each", funcName, i, j)
+				err := gitEach(repo, ref, configs.Gits[i].Processors[j])
+				if err != nil {
+					return err
+				}
+			case "all":
+				// Process the All git config.
+				cmn.Debug("%s: git %d: processor %d: mode: all", funcName, i, j)
+				err := gitAll(repo, ref, configs.Gits[i].Processors[j])
+				if err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("invalid git processor mode; should be head/each/all")
 			}
 		}
 	}
