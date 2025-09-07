@@ -4,9 +4,8 @@ Helper for Hugo to provide for pre-processing of files.
 
 ## Purpose
 
-Provide for a flexible pre-processor for Hugo, since we cannot as a community appear to be able to get certain filetypes supported for external handlers/processors in the core Hugo code.
-
-Intended to assist with any sort of pre-processing desired for publishing files, such as:
+Provide for a flexible pre-processor for Hugo. Intended to assist with any sort
+of pre-processing desired for publishing files, such as:
 
 * Diagrams converted to SVG.
   * Mermaid
@@ -17,11 +16,15 @@ Intended to assist with any sort of pre-processing desired for publishing files,
 
 ## Use
 
-A configuration file is used to define processing.  By default, the config filename is `.hugo-preproc.yaml` (or `.toml`, or `.json`).
+A configuration file is used to define processing.  By default, the config
+filename is `.hugo-preproc.yaml` (or `.toml`, or `.json`).
 
 You can specify a config file on command line with the `-c`/`--config` option.
 
 Execute the command and processing occurs based on the configuration.
+
+The Git processors can run a Go Template, and the Exec processors can run
+a command or a [Tengo](https://github.com/d5/tengo) script.
 
 ## Configuration Syntax
 
@@ -34,10 +37,15 @@ git:
       - mode: head | each | all
         file: path/to/output/{{ .Commit.Hash }}
         template: Entry {{ .<field> }}
+        script: |
+          // Tengo script...
 exec:
   - path: path/to/top/directory
     pattern: "*.md"
+    mode: each | all
     command: echo {{ . }}
+    script: |
+      // Tengo script...
 ```
 
 The `git` key  is an array object, with each array element defined as follows:
@@ -52,11 +60,13 @@ The `exec` key is an array object, with each array element defined as follows:
 
 * `path` - The top-level path that will be walked and scanned for matching filenames.
 * `pattern` - The pattern used to match the filenames while walking the `path` contents recursively.
-* `command` - The command to run on matching files; this value is processed as a Go template.
+* `mode` - Values of `each` (each file passed through the processor, consecutively), or `all` (all files passed through the processor).
+* `command` - The command to run on matching files; this value is processed as a Go template. (Exclusive of `script`; use one or the other.)
+* `script` - The Tengo script to run on matching files. (Exclusive of `command`; use one or the other.)
 
 The array entries will be executed serially, in the order in which they are defined.
 
-![Configuration Data Structure](config-data-model.svg)
+![Configuration Data Structure](config-data-model.drawio.svg)
 
 ## Go Templates
 
@@ -148,8 +158,23 @@ We provide the following input for the configured handlers.
     ```
 
 * `exec` handlers
+  * `template`
+    * `each`
 
-  ``` go
-  . string // String representing the matched filename,
-           // including its full path (handler top search path + sub-path to file).
-  ```
+        ``` go
+        . string // String representing the matched filename,
+                 // including its full path (handler top search path + sub-path to file).
+        ```
+
+    * `all`
+
+        ``` go
+        . []string // Array or strings representing the matched filenames,
+                   // including its full path (handler top search path + sub-path to file).
+        ```
+
+  * `script`
+    * `each`
+      * Variable named `file` is available to the script as a string.
+    * `all`
+      * Variable named `files` is available to the script as an array of strings.

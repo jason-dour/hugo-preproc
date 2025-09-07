@@ -4,6 +4,7 @@ package cmn
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -22,26 +23,29 @@ type (
 		Head    GitLogEntry
 	} // GitAll - Entire Git log.
 
-	GitLog struct {
+	GitProcessor struct {
 		Mode     string `mapstructure:"mode"`
 		File     string `mapstructure:"file"`
 		Template string `mapstructure:"template"`
-	} // GitLog - Configuration structure for processing git log entries.
+		Script   string `mapstructure:"script"`
+	} // GitProcessor - Configuration structure for processing git log entries.
 
 	Git struct {
-		Path       string   `mapstructure:"path"`
-		Processors []GitLog `mapstructure:"processors"`
+		Path       string         `mapstructure:"path"`
+		Processors []GitProcessor `mapstructure:"processors"`
 	} // Git - Configuration for handling git log entries.
 
-	Exec struct {
+	ExecProcessor struct {
 		Path    string `mapstructure:"path"`
 		Pattern string `mapstructure:"pattern"`
 		Command string `mapstructure:"command"`
-	} // Processor - Configuration structure for a single processor.
+		Script  string `mapstructure:"script"`
+		Mode    string `mapstructure:"mode"`
+	} // ExecProcessor - Configuration structure for a single exec.
 
 	Configs struct {
-		Gits       []Git  `mapstructure:"git,flow"`
-		Processors []Exec `mapstructure:"exec,flow"`
+		Gits  []Git           `mapstructure:"git,flow"`
+		Execs []ExecProcessor `mapstructure:"exec,flow"`
 	} // Configs - Array of processor configs.
 )
 
@@ -59,7 +63,7 @@ var (
 )
 
 // Debug writes debug output to Stderr if DebugFlag is true.
-func Debug(format string, args ...interface{}) {
+func Debug(format string, args ...any) {
 	if DebugFlag {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("debug: "+format, args...))
 	}
@@ -115,7 +119,43 @@ func InitConfig() {
 		os.Exit(1)
 	}
 
+	err = checkConfig(Config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %s\n", err.Error())
+		os.Exit(1)
+	}
+
 	Debug("%s: end", funcName)
+}
+
+// checkConfig checks for configuration cases that conflict.
+func checkConfig(configs *Configs) error {
+	funcName := "cmn.checkConfig"
+	Debug("%s: begin", funcName)
+
+	Debug("%s: checking execs", funcName)
+	for i := range configs.Execs {
+		Debug("%s: exec %d", funcName, i)
+		if (len(configs.Execs[i].Command) > 0) && (len(configs.Execs[i].Script) > 0) {
+			Debug("%s: exec %d: config conflict; both command and script defined", funcName, i)
+			return fmt.Errorf("%s: exec %d: config conflict; both command and script defined", funcName, i)
+		}
+	}
+
+	Debug("%s: checking gits", funcName)
+	for j := range configs.Gits {
+		Debug("%s: git %d: checking processors", funcName, j)
+		for k := range configs.Gits[j].Processors {
+			Debug("%s: git %d: processor %d", funcName, j, k)
+			if (len(configs.Gits[j].Processors[k].Template) > 0) && (len(configs.Gits[j].Processors[k].Script) > 0) {
+				Debug("%s: git %d: processor: %d: config conflict; both template and script defined", funcName, j, k)
+				return fmt.Errorf("%s: git %d: processor: %d: config conflict; both template and script defined", funcName, j, k)
+			}
+		}
+	}
+
+	Debug("%s: end", funcName)
+	return nil
 }
 
 // WalkMatch walks the tree and look for files matching the provided pattern.
@@ -127,9 +167,8 @@ func WalkMatch(root, pattern string) ([]string, error) {
 	var matches []string
 
 	// Walk the tree.
-	// TODO - Update to WalkDir?
-	err := filepath.Walk(root,
-		func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(root,
+		func(path string, info fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
