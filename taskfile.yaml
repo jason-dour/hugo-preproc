@@ -39,7 +39,7 @@ tasks:
   release:build:
     # desc: Build platform release.
     cmds:
-      - GOOS=linux GOARCH={{.ITEM}} go build -ldflags "{{.LD_FLAGS}}" -o {{.BASENAME}}_v{{.VERSION}}_{{.OS}}_{{.ARCH}}{{.EXE}} ./cmd/{{.BASENAME}}
+      - GOOS={{.OS}} GOARCH={{.ARCH}} go build -ldflags "{{.LD_FLAGS}}" -o {{.BASENAME}}_v{{.VERSION}}_{{.OS}}_{{.ARCH}}{{.EXE}} ./cmd/{{.BASENAME}}
 
   release:linux:
     desc: Build release files for Linux.
