@@ -37,8 +37,6 @@ git:
       - mode: head | each | all
         file: path/to/output/{{ .Commit.Hash }}
         template: Entry {{ .<field> }}
-        script: |
-          // Tengo script...
 exec:
   - path: path/to/top/directory
     pattern: "*.md"
