@@ -4,11 +4,11 @@ package processors
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/d5/tengo/v2"
