@@ -2,6 +2,19 @@
 
 Helper for Hugo to provide for pre-processing of files.
 
+## Installation
+
+You can either directly download binaries from the Releases page, build from
+source, or use `brew` on MacOS and Linux.
+
+### Brew
+
+```bash
+brew tap jason-dour/tap
+brew trust jason-dour/tap # Optional; allows for easier updates.
+brew install git-wt
+```
+
 ## Purpose
 
 Provide for a flexible pre-processor for Hugo. Intended to assist with any sort
